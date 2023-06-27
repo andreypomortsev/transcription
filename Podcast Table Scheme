@@ -1,0 +1,21 @@
+Podcast Table:
+
+id (integer, primary key)
+title (text)
+guest (text)
+description (text)
+duration (decimal)
+youtube_link (text)
+audio_file_url (text)
+image_url (text)
+transcription_text (text)
+
+Transcription Table:
+
+id (integer, primary key)
+podcast_id (integer, foreign key to Podcast table)
+transcription_text (text)
+
+This schema includes a table for Podcasts, which stores metadata about each podcast episode, such as the title, description, date, duration, and URLs for the audio file and image. Then, there's a separate Transcription table that stores the text transcriptions for each podcast. This table is linked to the Podcasts table via a foreign key constraint on the podcast_id column.
+
+This schema assumes that each podcast episode has a single associated transcription. If you expect some episodes to have multiple transcriptions (such as in different languages), you could add additional columns to the transcription table to track metadata about each transcription, or create a separate Intermediate table that links podcasts to their various transcriptions.
