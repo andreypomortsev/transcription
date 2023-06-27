@@ -44,7 +44,7 @@ def get_description(url: str) -> str:
         requests.exceptions.RequestException: if there is an error
         retrieving the web page from the specified URL.
     """
-    response = requests.get(url)
+    response = requests.get(url, timeout=3)
     soup = BeautifulSoup(response.content, "html.parser")
 
     text_div = soup.find("div", {"class": "entry-content"})
@@ -53,11 +53,15 @@ def get_description(url: str) -> str:
         if len(text) > 2:
             if "Please" in text[2].text:
                 indx = text[2].text.index(" Please ")
-                return text[2].text[:indx]
-            return text[2].text
-    except Exception:
-        text = text_div.find("span").text
-        return text
+                result = text[2].text[:indx]
+                return result
+            result = text[2].text
+            return result
+        result = text_div.find("span").text
+        return result
+    except Exception as error:
+        logging.exception("Couldn't find any description in podcast %s, %s", url, error)
+        return None
 
 
 def get_duration(mp3_url: str) -> float:
@@ -68,7 +72,8 @@ def get_duration(mp3_url: str) -> float:
         mp3_url (str): A string representing the URL of the MP3 audio file.
 
     Returns:
-        A float representing the length of the MP3 audio file in seconds, rounded to 2 decimal places.
+        A float representing the length of the MP3 audio file in seconds,
+        rounded to 2 decimal places.
 
     Raises:
         IOError: If there is an I/O error while retrieving the MP3 audio file from 'mp3_url'.
@@ -80,7 +85,7 @@ def get_duration(mp3_url: str) -> float:
     """
     try:
         # Retrieve the MP3 audio file using the provided URL
-        response = requests.get(mp3_url)
+        response = requests.get(mp3_url, timeout=3)
 
         # Read the MP3 audio file into a bytes buffer using io.BytesIO
         with io.BytesIO(response.content) as mp3_buffer:
@@ -91,11 +96,11 @@ def get_duration(mp3_url: str) -> float:
             return round(mp3.info.length, 2)
     except requests.exceptions.RequestException as error:
         # Raise an exception if there is an error retrieving the MP3 audio file
-        logging.exception(f"Error retrieving MP3 file from {mp3_url}: {error}")
+        logging.exception("Error retrieving MP3 file from %s: %s", mp3_url, error)
         return 0
 
 
-def get_date_time(youtube_video_id: str, API_KEY: str) -> tuple:
+def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
     """
     Retrieves the date and time when a YouTube video was uploaded, given its
     video ID and a valid YouTube Data API key.
@@ -111,10 +116,10 @@ def get_date_time(youtube_video_id: str, API_KEY: str) -> tuple:
     """
     # Create a YouTube Data API client using the provided API key
     if not youtube_video_id:
-        logging.exception(f"Youtube id can't be {youtube_video_id}, fix the input")
+        logging.exception("Youtube id can't be %s, fix the input", youtube_video_id)
         return None
 
-    youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=API_KEY)
+    youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=api_key)
 
     # Retrieve the video snippet using the video ID
     request = youtube.videos().list(part="snippet", id=youtube_video_id)
@@ -130,12 +135,15 @@ def get_date_time(youtube_video_id: str, API_KEY: str) -> tuple:
     except (KeyError, IndexError) as error:
         # If the video ID is invalid or the API call fails, return None
         logging.exception(
-            f"Error retrieving upload time file with id {youtube_video_id} to youtube: {error}"
+            "Error retrieving upload time file with id %s to youtube: %s",
+            youtube_video_id,
+            error,
         )
         return None
     except HttpError as error:
         logging.exception(
-            f"There is some problem with either the api key or with the Internet {error}"
+            "There is some problem with either the api key or with the Internet %s",
+            error,
         )
         return None
 
@@ -163,7 +171,7 @@ def convert_to_timestamp(date_str: str) -> tuple:
         timestamp = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
     except ValueError as error:
         # Raise an error if the input string is not in the expected format
-        logging.exception(f"Invalid ISO 8601 format: {date_str}: {error}")
+        logging.exception("Invalid ISO 8601 format: %s: %s", date_str, error)
         return 0, 0
 
     # Extract the date and time components from the datetime object
@@ -193,12 +201,12 @@ def get_youtube_id(youtube_url: str) -> str:
     if match:
         video_id = match.group(1)
         return video_id
-    else:
-        # If no match is found add the info to the logging, and return None
-        logging.exception(
-            f"Can't extract the video ID from the match object from the url {youtube_url}"
-        )
-        return None
+
+    # If no match is found add the info to the logging, and return None
+    logging.exception(
+        "Can't extract the video ID from the match object from the url %s", youtube_url
+    )
+    return None
 
 
 def check_url_response(url: str) -> str:
@@ -212,10 +220,10 @@ def check_url_response(url: str) -> str:
         If the response status code is 200 OK, return the input URL.
         Otherwise, return None.
     """
-    response = requests.get(url)
+    response = requests.get(url, timeout=3)
     if response.status_code == requests.codes.ok:
         return url
-    logging.exception(f"The url {url} responce code is {response.status_code}")
+    logging.exception("The url %s responce code is %s", url, response.status_code)
     return None
 
 
@@ -230,10 +238,13 @@ def get_audio_file_url(podcast_url: str) -> str:
         A string containing the URL of the audio file, or None if the URL cannot be retrieved.
     """
     try:
-        response = requests.get(podcast_url)
+        response = requests.get(podcast_url, timeout=3)
     except requests.exceptions.RequestException as error:
         logging.exception(
-            f"The url {podcast_url} responce code is {response.status_code}. Error: {error}."
+            "The url %s responce code is %s. Error: %s.",
+            podcast_url,
+            response.status_code,
+            error,
         )
         return None
 
@@ -242,9 +253,7 @@ def get_audio_file_url(podcast_url: str) -> str:
         audio_file_url = soup.find("a", {"class": "powerpress_link_pinw"})["href"]
         return check_url_response(audio_file_url)
     except TypeError as error:
-        logging.exception(
-            f"The url {podcast_url} responce code is {response.status_code}. Error: {error}"
-        )
+        logging.exception("The url %s is incorrect. Error: %s.", podcast_url, error)
         return None
 
 
@@ -256,7 +265,7 @@ def get_audio_name(thumbnail_url: str, podcast_url: str) -> str:
     Args:
         thumbnail_url: A string containing the URL of the podcast episode thumbnail image.
         podcast_url: A string containing the URL of the podcast episode page.
-    
+
     Returns:
         A string containing the URL of the audio file, or None if the URL cannot be retrieved.
     """
@@ -299,10 +308,19 @@ def get_data() -> set:
             - date (datetime.date): date the podcast was uploaded on youtube.com.
             - time (datetime.time): time the podcast was uploaded on youtube.com.
     """
+    global api_key
     url = "https://lexfridman.com/podcast/"
     csv_episodes = set()
-    response = requests.get(url)
-    if not check_url_response(url):
+    try:
+        response = requests.get(url, timeout=3)
+    except requests.exceptions.RequestException as error:
+        logging.exception(
+            "The url %s responce code is %s. Error: %s.",
+            url,
+            response.status_code,
+            error,
+        )
+        return None
 
     soup = BeautifulSoup(response.content, "html.parser")
 
@@ -319,7 +337,7 @@ def get_data() -> set:
             audio_file_url = get_audio_name(thumbnail_url, podcast_page)
             duration = get_duration(audio_file_url)
             youtube_video_id = get_youtube_id(youtube_url)
-            date, time = get_date_time(youtube_video_id, API_KEY)
+            date, time = get_date_time(youtube_video_id, api_key)
             record = (
                 title,
                 guest,
@@ -338,7 +356,7 @@ def get_data() -> set:
                     return csv_episodes
             csv_episodes.add(record)
         except Exception as error:
-            logging.exception(f"There is {error} in {title}")
+            logging.exception("There is %s in %s", error, title)
             continue
     return csv_episodes
 
@@ -351,7 +369,7 @@ def save_list_to_csv(data: list, filename: str) -> None:
         each next tuple represents a row in the CSV file.
         filename: A string representing the filename for the output CSV file.
     """
-    with open(f"{filename}.csv", "w", newline="") as file:
+    with open(f"{filename}.csv", "w", newline="", encoding="UTF-8") as file:
         writer = csv.writer(file)
 
         # Write header row
@@ -374,5 +392,5 @@ def save_list_to_csv(data: list, filename: str) -> None:
 
 
 if __name__ == "__main__":
-    data = get_data()
-    save_list_to_csv(data, "lex_podcasts")
+    data_list = get_data()
+    save_list_to_csv(data_list, "lex_podcasts")
