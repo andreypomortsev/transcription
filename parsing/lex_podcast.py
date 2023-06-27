@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+""" Module parses the lexfridman.com/podcast and return information about all podcasts
+in format of a csv file delimited by a ','. The csv file consists the next fields:
+    - 
+"""
 import csv
 import json
 import re
@@ -203,13 +207,20 @@ def get_audio_file_url(podcast_url: str) -> str:
     :param podcast_url: A string containing the URL of the podcast episode page.
     :return: A string containing the URL of the audio file, or None if the URL cannot be retrieved.
     """
-    response = requests.get(podcast_url)
+    try:
+        response = requests.get(podcast_url)
+    except requests.exceptions.RequestException as e:
+        logging.exception(f'The url {podcast_url} responce code is {response.status_code}. Error: {e}.')
+        return None
+    
     soup = BeautifulSoup(response.content, "html.parser")
     try:
         audio_file_url = soup.find("a", {"class": "powerpress_link_pinw"})["href"]
         return check_url_response(audio_file_url)
-    except TypeError:
+    except TypeError as e:
+        logging.exception(f'The url {podcast_url} responce code is {response.status_code}')
         return None
+
 
 
 def get_audio_name(thumbnail_url: str, podcast_url: str) -> str:
@@ -238,3 +249,57 @@ def get_audio_name(thumbnail_url: str, podcast_url: str) -> str:
 
     audio_file_url = get_audio_file_url(podcast_url)
     return audio_file_url
+
+def get_data() -> set:
+    """
+    Retrieves podcast episode data from "https://lexfridman.com/podcast/" and
+    collects the title, guest name, description, duration, YouTube URL,
+    audio file URL, and thumbnail URL for each episode.
+
+    Returns:
+    A set of tuples, where each tuple contains the metadata for a single podcast episode.
+    The tuples are structured as follows:
+        - title (str): the title of the episode.
+        - guest (str): the name of the guest featured in the episode.
+        - description (str): a brief description of the contents of the episode.
+        - duration (str): the length of the episode, in the format "HH:MM:SS".
+        - youtube_url (str): the URL of the YouTube video, if available.
+        - audio_file_url (str): the URL of the audio file associated with the episode.
+        - thumbnail_url (str): the URL of the thumbnail image for the episode.
+    """
+    url = "https://lexfridman.com/podcast/"
+    csv_episodes = set()
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    episods = soup.find_all("div", {"class": "guest"})
+    for episode in episods:
+        try:
+          youtube_url, podcast_page = [
+              link["href"] for link in episode.select("div.vid-materials a")[:2]
+          ]
+          title = episode.select_one(".vid-title a").text
+          guest = episode.select_one(".vid-person").text
+          thumbnail_url = episode.select_one(".thumb-youtube img")["src"]
+          description = get_description(podcast_page)
+          audio_file_url = get_audio_name(thumbnail_url, podcast_page)
+          duration = get_duration(audio_file_url)
+          record = (
+                  title,
+                  guest,
+                  description,
+                  duration,
+                  youtube_url,
+                  audio_file_url,
+                  thumbnail_url,
+              )
+          duplicate_score = 0
+          if record in csv_episodes:
+            duplicate_score += 0.5
+            if duplicate_score == 1:
+              return csv_episodes
+          csv_episodes.add(record)
+        except Exception as e:
+          print(e, title)
+          continue
+    return csv_episodes
