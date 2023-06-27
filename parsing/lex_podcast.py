@@ -107,7 +107,7 @@ def get_duration(mp3_url: str) -> float:
         return 0
 
 
-def get_date_time(youtube_video_id: str, api_key: str) -> str:
+def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
     """
     Retrieves the date and time when a YouTube video was uploaded, given its
     video ID and a valid YouTube Data API key.
