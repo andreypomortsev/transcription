@@ -16,10 +16,10 @@ The csv file consists the next fields:
 import csv
 import re
 from datetime import datetime
-from dotenv import load_dotenv
-import requests
 import io
 import logging
+from dotenv import load_dotenv
+import requests
 from bs4 import BeautifulSoup
 from mutagen.mp3 import MP3
 import googleapiclient.discovery
@@ -89,9 +89,9 @@ def get_duration(mp3_url: str) -> float:
 
             # Return the length of the MP3 audio file in seconds, rounded to 2 decimal places
             return round(mp3.info.length, 2)
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as error:
         # Raise an exception if there is an error retrieving the MP3 audio file
-        logging.exception(f"Error retrieving MP3 file from {mp3_url}: {e}")
+        logging.exception(f"Error retrieving MP3 file from {mp3_url}: {error}")
         return 0
 
 
@@ -127,15 +127,15 @@ def get_date_time(youtube_video_id: str, API_KEY: str) -> tuple:
         upload_datetime = datetime.fromisoformat(upload_date)
         upload_datetime_str = upload_datetime.strftime("%Y-%m-%d %H:%M:%S")
         return upload_datetime_str
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError) as error:
         # If the video ID is invalid or the API call fails, return None
         logging.exception(
-            f"Error retrieving upload time file with id {youtube_video_id} to youtube: {e}"
+            f"Error retrieving upload time file with id {youtube_video_id} to youtube: {error}"
         )
         return None
-    except HttpError as e:
+    except HttpError as error:
         logging.exception(
-            f"There is some problem with either the api key or with the Internet {e}"
+            f"There is some problem with either the api key or with the Internet {error}"
         )
         return None
 
@@ -161,9 +161,9 @@ def convert_to_timestamp(date_str: str) -> tuple:
     try:
         # Parse the input string as a datetime object
         timestamp = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
-    except ValueError as e:
+    except ValueError as error:
         # Raise an error if the input string is not in the expected format
-        logging.exception(f"Invalid ISO 8601 format: {date_str}: {e}")
+        logging.exception(f"Invalid ISO 8601 format: {date_str}: {error}")
         return 0, 0
 
     # Extract the date and time components from the datetime object
@@ -231,9 +231,9 @@ def get_audio_file_url(podcast_url: str) -> str:
     """
     try:
         response = requests.get(podcast_url)
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as error:
         logging.exception(
-            f"The url {podcast_url} responce code is {response.status_code}. Error: {e}."
+            f"The url {podcast_url} responce code is {response.status_code}. Error: {error}."
         )
         return None
 
@@ -241,9 +241,9 @@ def get_audio_file_url(podcast_url: str) -> str:
     try:
         audio_file_url = soup.find("a", {"class": "powerpress_link_pinw"})["href"]
         return check_url_response(audio_file_url)
-    except TypeError as e:
+    except TypeError as error:
         logging.exception(
-            f"The url {podcast_url} responce code is {response.status_code}"
+            f"The url {podcast_url} responce code is {response.status_code}. Error: {error}"
         )
         return None
 
@@ -302,6 +302,8 @@ def get_data() -> set:
     url = "https://lexfridman.com/podcast/"
     csv_episodes = set()
     response = requests.get(url)
+    if not check_url_response(url):
+
     soup = BeautifulSoup(response.content, "html.parser")
 
     episods = soup.find_all("div", {"class": "guest"})
@@ -335,8 +337,8 @@ def get_data() -> set:
                 if duplicate_score == 1:
                     return csv_episodes
             csv_episodes.add(record)
-        except Exception as e:
-            print(e, title)
+        except Exception as error:
+            logging.exception(f"There is {error} in {title}")
             continue
     return csv_episodes
 
