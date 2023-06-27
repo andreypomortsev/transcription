@@ -1,12 +1,23 @@
 #!/usr/bin/env python
 """ Module parses the lexfridman.com/podcast and return information about all podcasts
-in format of a csv file delimited by a ','. The csv file consists the next fields:
-    - 
+in format of a csv file delimited by a ','.
+
+The csv file consists the next fields:
+    - title (str): the title of the episode.
+    - guest (str): the name of the guest featured in the episode.
+    - description (str): a brief description of the contents of the episode.
+    - duration (str): the length of the episode, in the format "HH:MM:SS".
+    - youtube_url (str): the URL of the YouTube video, if available.
+    - audio_file_url (str): the URL of the audio file associated with the episode.
+    - thumbnail_url (str): the URL of the thumbnail image for the episode.
+    - date (datetime): date the podcast was uploaded on youtube.com.
+    - time (datetime): time the podcast was uploaded on youtube.com.
 """
 import csv
 import json
 import re
 from datetime import datetime
+from dotenv import load_dotenv
 import requests
 import io
 import logging
@@ -15,6 +26,7 @@ from mutagen.mp3 import MP3
 import googleapiclient.discovery
 from googleapiclient.errors import HttpError
 
+load_dotenv()
 logging.basicConfig(filename='errors.log', level=logging.ERROR)
 
 def get_description(url: str) -> str:
@@ -266,6 +278,8 @@ def get_data() -> set:
         - youtube_url (str): the URL of the YouTube video, if available.
         - audio_file_url (str): the URL of the audio file associated with the episode.
         - thumbnail_url (str): the URL of the thumbnail image for the episode.
+        - date (datetime): date the podcast was uploaded on youtube.com.
+        - time (datetime): time the podcast was uploaded on youtube.com.
     """
     url = "https://lexfridman.com/podcast/"
     csv_episodes = set()
@@ -284,6 +298,8 @@ def get_data() -> set:
           description = get_description(podcast_page)
           audio_file_url = get_audio_name(thumbnail_url, podcast_page)
           duration = get_duration(audio_file_url)
+          youtube_video_id = get_youtube_id(youtube_url)
+          date, time = get_date_time(youtube_video_id, APY_KEY)
           record = (
                   title,
                   guest,
@@ -292,6 +308,8 @@ def get_data() -> set:
                   youtube_url,
                   audio_file_url,
                   thumbnail_url,
+                  date,
+                  time
               )
           duplicate_score = 0
           if record in csv_episodes:
