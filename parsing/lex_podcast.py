@@ -14,7 +14,6 @@ The csv file consists the next fields:
     - time (datetime): time the podcast was uploaded on youtube.com.
 """
 import csv
-import json
 import re
 from datetime import datetime
 from dotenv import load_dotenv
@@ -350,4 +349,7 @@ def save_list_to_csv(data: list, filename: str) -> None:
         # Write data rows
         for row in data:
             writer.writerow(row)
-            
+
+if __name__=="__main__":
+    data = get_data()
+    save_list_to_csv(data, 'lex_podcasts')
