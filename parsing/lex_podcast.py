@@ -299,7 +299,7 @@ def get_data() -> set:
           audio_file_url = get_audio_name(thumbnail_url, podcast_page)
           duration = get_duration(audio_file_url)
           youtube_video_id = get_youtube_id(youtube_url)
-          date, time = get_date_time(youtube_video_id, APY_KEY)
+          date, time = get_date_time(youtube_video_id, API_KEY)
           record = (
                   title,
                   guest,
@@ -321,3 +321,33 @@ def get_data() -> set:
           print(e, title)
           continue
     return csv_episodes
+
+def save_list_to_csv(data: list, filename: str) -> None:
+    """Write the data to a CSV file with the given filename.
+
+    Args:
+        data: A list of tuples, where the first tuple is a header and
+        each next tuple represents a row in the CSV file.
+        filename: A string representing the filename for the output CSV file.
+    """
+    with open(f"{filename}.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+
+        # Write header row
+        header =         (
+            "title",
+            "guest",
+            "description",
+            "duration",
+            "youtube_url",
+            "audio_file_url",
+            "thumbnail_url",
+            "date",
+            "time"
+        )
+        writer.writerow(header)
+
+        # Write data rows
+        for row in data:
+            writer.writerow(row)
+            
