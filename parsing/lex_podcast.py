@@ -18,15 +18,22 @@ import re
 from datetime import datetime
 import io
 import logging
+import os
+import time as time_to_sleep
 from dotenv import load_dotenv
 import requests
+import random
 from bs4 import BeautifulSoup
 from mutagen.mp3 import MP3
 import googleapiclient.discovery
 from googleapiclient.errors import HttpError
 
 load_dotenv()
-logging.basicConfig(filename="errors.log", level=logging.ERROR)
+api_key = os.getenv("api_key")
+
+logging.basicConfig(
+    format="%(asctime)s %(message)s", filename="errors.log", level=logging.ERROR
+)
 
 
 def get_description(url: str) -> str:
@@ -44,7 +51,7 @@ def get_description(url: str) -> str:
         requests.exceptions.RequestException: if there is an error
         retrieving the web page from the specified URL.
     """
-    response = requests.get(url, timeout=3)
+    response = requests.get(url, timeout=5)
     soup = BeautifulSoup(response.content, "html.parser")
 
     text_div = soup.find("div", {"class": "entry-content"})
@@ -85,7 +92,7 @@ def get_duration(mp3_url: str) -> float:
     """
     try:
         # Retrieve the MP3 audio file using the provided URL
-        response = requests.get(mp3_url, timeout=3)
+        response = requests.get(mp3_url, timeout=5)
 
         # Read the MP3 audio file into a bytes buffer using io.BytesIO
         with io.BytesIO(response.content) as mp3_buffer:
@@ -96,18 +103,19 @@ def get_duration(mp3_url: str) -> float:
             return round(mp3.info.length, 2)
     except requests.exceptions.RequestException as error:
         # Raise an exception if there is an error retrieving the MP3 audio file
-        logging.exception("Error retrieving MP3 file from %s: %s", mp3_url, error)
+        logging.debug("Error retrieving MP3 file from %s: %s", mp3_url, error)
         return 0
 
 
-def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
+def get_date_time(youtube_video_id: str, api_key: str) -> str:
     """
     Retrieves the date and time when a YouTube video was uploaded, given its
     video ID and a valid YouTube Data API key.
 
     Args:
         youtube_video_id (str): The 11-character video ID of the desired YouTube video.
-        api_key (str): A valid YouTube Data API key with the 'youtube.readonly' scope.
+        api_key
+     (str): A valid YouTube Data API key with the 'youtube.readonly' scope.
 
     Returns:
         A tuple containing the date and time when the video was uploaded on YouTube,
@@ -131,7 +139,8 @@ def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
         upload_date = upload_date.replace("Z", "+00:00")  # Convert to UTC time zone
         upload_datetime = datetime.fromisoformat(upload_date)
         upload_datetime_str = upload_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        return upload_datetime_str
+        date_time = convert_to_timestamp(upload_datetime_str)
+        return date_time
     except (KeyError, IndexError) as error:
         # If the video ID is invalid or the API call fails, return None
         logging.exception(
@@ -168,7 +177,7 @@ def convert_to_timestamp(date_str: str) -> tuple:
     """
     try:
         # Parse the input string as a datetime object
-        timestamp = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
+        timestamp = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
     except ValueError as error:
         # Raise an error if the input string is not in the expected format
         logging.exception("Invalid ISO 8601 format: %s: %s", date_str, error)
@@ -220,7 +229,7 @@ def check_url_response(url: str) -> str:
         If the response status code is 200 OK, return the input URL.
         Otherwise, return None.
     """
-    response = requests.get(url, timeout=3)
+    response = requests.get(url, timeout=5)
     if response.status_code == requests.codes.ok:
         return url
     logging.exception("The url %s responce code is %s", url, response.status_code)
@@ -238,7 +247,7 @@ def get_audio_file_url(podcast_url: str) -> str:
         A string containing the URL of the audio file, or None if the URL cannot be retrieved.
     """
     try:
-        response = requests.get(podcast_url, timeout=3)
+        response = requests.get(podcast_url, timeout=5)
     except requests.exceptions.RequestException as error:
         logging.exception(
             "The url %s responce code is %s. Error: %s.",
@@ -308,11 +317,10 @@ def get_data() -> set:
             - date (datetime.date): date the podcast was uploaded on youtube.com.
             - time (datetime.time): time the podcast was uploaded on youtube.com.
     """
-    global api_key
     url = "https://lexfridman.com/podcast/"
     csv_episodes = set()
     try:
-        response = requests.get(url, timeout=3)
+        response = requests.get(url, timeout=5)
     except requests.exceptions.RequestException as error:
         logging.exception(
             "The url %s responce code is %s. Error: %s.",
@@ -325,7 +333,8 @@ def get_data() -> set:
     soup = BeautifulSoup(response.content, "html.parser")
 
     episods = soup.find_all("div", {"class": "guest"})
-    for episode in episods:
+    for episode in episods[:5]:
+        time_to_sleep.sleep(round(random.uniform(0.00, 3.00), 2))
         try:
             youtube_url, podcast_page = [
                 link["href"] for link in episode.select("div.vid-materials a")[:2]
@@ -361,15 +370,15 @@ def get_data() -> set:
     return csv_episodes
 
 
-def save_list_to_csv(data: list, filename: str) -> None:
-    """Write the data to a CSV file with the given filename.
+def save_list_to_csv(data: list, file_name: str) -> None:
+    """Write the data to a CSV file with the given file_name.
 
     Args:
         data: A list of tuples, where the first tuple is a header and
         each next tuple represents a row in the CSV file.
-        filename: A string representing the filename for the output CSV file.
+        file_name: A string representing the file_name for the output CSV file.
     """
-    with open(f"{filename}.csv", "w", newline="", encoding="UTF-8") as file:
+    with open(f"{file_name}.csv", "w", newline="", encoding="UTF-8") as file:
         writer = csv.writer(file)
 
         # Write header row
