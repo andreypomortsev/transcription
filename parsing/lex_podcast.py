@@ -14,19 +14,20 @@ The csv file consists the next fields:
     - time (datetime.time): time the podcast was uploaded on youtube.com.
 """
 import csv
-import re
-from datetime import datetime
 import io
 import logging
 import os
-import time as time_to_sleep
-from dotenv import load_dotenv
-import requests
 import random
-from bs4 import BeautifulSoup
-from mutagen.mp3 import MP3
+import re
+import time as time_to_sleep
+from datetime import datetime
+
 import googleapiclient.discovery
+import requests
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from googleapiclient.errors import HttpError
+from mutagen.mp3 import MP3
 
 load_dotenv()
 api_key = os.getenv("api_key")
