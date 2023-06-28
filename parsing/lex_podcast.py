@@ -334,7 +334,7 @@ def get_data() -> set:
     soup = BeautifulSoup(response.content, "html.parser")
 
     episods = soup.find_all("div", {"class": "guest"})
-    for episode in episods[:5]:
+    for episode in episods:
         time_to_sleep.sleep(round(random.uniform(0.00, 3.00), 2))
         try:
             youtube_url, podcast_page = [
