@@ -412,6 +412,13 @@ def save_list_to_csv(data: list, file_name: str) -> None:
 
         # Write data rows
         for row in data:
+            if type(row) is not tuple:
+                try:
+                    row = tuple(row)
+                    writer.writerow(row)
+                except Exception as error:
+                    logging.exception("There is %s in %s", error, row)
+                    pass
             writer.writerow(row)
 
 
