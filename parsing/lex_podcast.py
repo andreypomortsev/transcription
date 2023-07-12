@@ -416,7 +416,7 @@ def save_list_to_csv(data: list, file_name: str) -> None:
 
 
 def main() -> None:
-    """This function calls the get_data function to retrieve all the podcast episodes
+    """Calls the get_data function to retrieve all the podcast episodes
     from the Lex Fridman podcast webpage and passes each episode to the parse_the_data
     function to extract the relevant metadata for the podcast. Finally, it writes
     the retrieved metadata to a CSV file using the save_list_to_csv function.
