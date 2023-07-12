@@ -382,7 +382,7 @@ def parse_the_data(episode: ResultSet) -> tuple | None:
         return record
     except Exception as error:
         logging.exception("There is %s in %s", error, title)
-        return [None for _ in range(9)]
+        return tuple([None for _ in range(9)])
 
 
 def save_list_to_csv(data: list, file_name: str) -> None:
