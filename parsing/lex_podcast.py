@@ -335,7 +335,7 @@ def get_data() -> set:
     return episodes
 
 
-def parse_the_data(episode: ResultSet) -> tuple | None:
+def parse_the_data(episode: ResultSet) -> tuple:
     """Parses the data for the given episode and returns a tuple containing
     the following data:
     - Title of the episode
@@ -412,13 +412,14 @@ def save_list_to_csv(data: list, file_name: str) -> None:
 
         # Write data rows
         for row in data:
+            if all(field is None for field in row):
+                continue
             if type(row) is not tuple:
                 try:
                     row = tuple(row)
                     writer.writerow(row)
                 except Exception as error:
                     logging.exception("There is %s in %s", error, row)
-                    pass
             writer.writerow(row)
 
 
@@ -429,7 +430,7 @@ def main() -> None:
     the retrieved metadata to a CSV file using the save_list_to_csv function.
     """
     episodes = get_data()
-    data_list = set(map(parse_the_data, episodes))
+    data_list = set(map(parse_the_data, episodes[70:73]))
     save_list_to_csv(data_list, "lex_podcasts")
 
 
