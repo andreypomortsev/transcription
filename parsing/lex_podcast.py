@@ -430,7 +430,7 @@ def main() -> None:
     the retrieved metadata to a CSV file using the save_list_to_csv function.
     """
     episodes = get_data()
-    data_list = set(map(parse_the_data, episodes[70:73]))
+    data_list = set(map(parse_the_data, episodes))
     save_list_to_csv(data_list, "lex_podcasts")
 
 
