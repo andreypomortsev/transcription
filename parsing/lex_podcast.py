@@ -283,16 +283,14 @@ def get_audio_name(thumbnail_url: str, podcast_url: str) -> str:
     match = re.search(pattern, thumbnail_url)
     if match:
         file_name = match.group(1)
-        audio_file_url = (
-            f"https://content.blubrry.com/takeituneasy/lex_ai_{file_name}.mp3"
-        )
-        if check_url_response(audio_file_url):
-            return audio_file_url
-        audio_file_url = (
-            f"https://content.blubrry.com/takeituneasy/mit_ai_{file_name}.mp3"
-        )
-        if check_url_response(audio_file_url):
-            return audio_file_url
+
+        prefixes = ["lex_ai", "mit_ai", "lex_audio"]
+        for prefix in prefixes:
+            audio_file_url = (
+                f"https://content.blubrry.com/takeituneasy/{prefix}_{file_name}.mp3"
+            )
+            if check_url_response(audio_file_url):
+                return audio_file_url
 
     audio_file_url = get_audio_file_url(podcast_url)
     return audio_file_url
@@ -382,7 +380,7 @@ def parse_the_data(episode: ResultSet) -> tuple:
         return record
     except Exception as error:
         logging.exception("There is %s in %s", error, title)
-        return tuple([None for _ in range(9)])
+        return tuple(None for _ in range(9))
 
 
 def save_list_to_csv(data: list, file_name: str) -> None:
@@ -412,7 +410,7 @@ def save_list_to_csv(data: list, file_name: str) -> None:
 
         # Write data rows
         for row in data:
-            if all(field is None for field in row):
+            if all(isinstance(field, type(None)) for field in row):
                 continue
             if type(row) is not tuple:
                 try:
