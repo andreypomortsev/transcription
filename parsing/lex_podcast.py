@@ -126,8 +126,13 @@ def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
         fails, the function returns None.
     """
     # Create a YouTube Data API client using the provided API key
-    if not youtube_video_id:
-        logging.exception("Youtube id can't be %s, fix the input", youtube_video_id)
+    if all(isinstance(argument, str) for argument in (youtube_video_id, api_key)):
+        logging.exception(
+            "Some variable(s) in the input has a wrong type %s is %s, api's type: %s, fix the input",
+            youtube_video_id,
+            type(youtube_video_id),
+            type(api_key),
+        )
         return None
 
     youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=api_key)
@@ -212,7 +217,7 @@ def get_youtube_id(youtube_url: str) -> str:
             type(youtube_url),
         )
         return None
-    
+
     # Search for the video ID in the URL using a regular expression
     match = re.search(r"(?<=v=)[\w-]+", youtube_url)
 
