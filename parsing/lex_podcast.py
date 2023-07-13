@@ -204,6 +204,15 @@ def get_youtube_id(youtube_url: str) -> str:
         A string containing the 11-character YouTube video ID, or None if the URL
         is not in the correct format.
     """
+    # Validate the input
+    if not isinstance(youtube_url, str):
+        logging.exception(
+            "Wrong format of the url %s, it should be string not %s",
+            youtube_url,
+            type(youtube_url),
+        )
+        return None
+    
     # Search for the video ID in the URL using a regular expression
     match = re.search(r"(?<=v=)[\w-]+", youtube_url)
 
