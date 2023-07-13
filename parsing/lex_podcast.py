@@ -175,7 +175,7 @@ def convert_to_timestamp(date_str: str) -> tuple:
         and a 'time' object representing the time portion of the input string.
 
     Example:
-        >>> convert_to_timestamp('2022-11-04T16:09:32Z')
+        >>> convert_to_timestamp('2022-11-04 16:09:32')
         (datetime.date(2022, 11, 4), datetime.time(16, 9, 32))
     """
     try:
