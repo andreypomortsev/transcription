@@ -29,11 +29,10 @@ from googleapiclient.errors import HttpError
 from mutagen.mp3 import MP3
 
 load_dotenv()
-api_key = os.getenv("api_key")
+key = os.getenv("api_key")
 
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     filename=f"{__name__}_{now}.log",
@@ -132,14 +131,14 @@ def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
     # Create a YouTube Data API client using the provided API key
     if not all(isinstance(argument, str) for argument in (youtube_video_id, api_key)):
         logging.exception(
-            "Some variable(s) in the input has a wrong type %s is %s, api's type: %s, fix the input",
+            "Some variable(s) in the input has a wrong type %s is %s api's type: %s fix the input",
             youtube_video_id,
             type(youtube_video_id),
             type(api_key),
         )
         return None, None
 
-    youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=api_key)
+    youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=key)
 
     # Retrieve the video snippet using the video ID
     request = youtube.videos().list(part="snippet", id=youtube_video_id)
@@ -383,7 +382,7 @@ def parse_the_data(episode: ResultSet) -> tuple:
         audio_file_url = get_audio_name(thumbnail_url, podcast_page)
         duration = get_duration(audio_file_url)
         youtube_video_id = get_youtube_id(youtube_url)
-        date, time = get_date_time(youtube_video_id, api_key)
+        date, time = get_date_time(youtube_video_id, key)
         record = (
             title,
             guest,
@@ -430,7 +429,7 @@ def save_list_to_csv(data: list, file_name: str) -> None:
         for row in data:
             if all(isinstance(field, type(None)) for field in row):
                 continue
-            if type(row) is not tuple:
+            if not isinstance(row, tuple):
                 try:
                     row = tuple(row)
                     writer.writerow(row)
@@ -446,7 +445,7 @@ def main() -> None:
     the retrieved metadata to a CSV file using the save_list_to_csv function.
     """
     episodes = get_data()
-    data_list = set(map(parse_the_data, episodes[:1]))
+    data_list = set(map(parse_the_data, episodes))
     save_list_to_csv(data_list, "lex_podcasts")
 
 
