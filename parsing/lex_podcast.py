@@ -31,9 +31,13 @@ from mutagen.mp3 import MP3
 load_dotenv()
 api_key = os.getenv("api_key")
 
+
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 logging.getLogger(__name__)
 logging.basicConfig(
-    format="%(asctime)s %(message)s", filename="errors.log", level=logging.ERROR
+    format="%(asctime)s %(message)s",
+    filename=f"{__name__}_{now}.log",
+    level=logging.ERROR,
 )
 
 
@@ -126,14 +130,14 @@ def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
         fails, the function returns None.
     """
     # Create a YouTube Data API client using the provided API key
-    if all(isinstance(argument, str) for argument in (youtube_video_id, api_key)):
+    if not all(isinstance(argument, str) for argument in (youtube_video_id, api_key)):
         logging.exception(
             "Some variable(s) in the input has a wrong type %s is %s, api's type: %s, fix the input",
             youtube_video_id,
             type(youtube_video_id),
             type(api_key),
         )
-        return None
+        return None, None
 
     youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=api_key)
 
@@ -156,13 +160,13 @@ def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
             youtube_video_id,
             error,
         )
-        return None
+        return None, None
     except HttpError as error:
         logging.exception(
             "There is some problem with either the api key or with the Internet %s",
             error,
         )
-        return None
+        return None, None
 
 
 def convert_to_timestamp(date_str: str) -> tuple:
@@ -442,7 +446,7 @@ def main() -> None:
     the retrieved metadata to a CSV file using the save_list_to_csv function.
     """
     episodes = get_data()
-    data_list = set(map(parse_the_data, episodes))
+    data_list = set(map(parse_the_data, episodes[:1]))
     save_list_to_csv(data_list, "lex_podcasts")
 
 
