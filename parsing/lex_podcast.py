@@ -27,6 +27,7 @@ from bs4.element import ResultSet
 from dotenv import load_dotenv
 from googleapiclient.errors import HttpError
 from mutagen.mp3 import MP3
+import mutagen  # don't delete needs for tests
 
 load_dotenv()
 key = os.getenv("api_key")
@@ -59,6 +60,13 @@ def get_description(url: str) -> str:
         "Retrieves the description text of a Lex Fridman podcast episode from: %s", url
     )
     response = requests.get(url, timeout=5)
+    if not response.status_code in response.status_code.ok:
+        logging.exception(
+            "Provided URL: %s is not accessible,\n status code: %s",
+            url,
+            response.status_code,
+        )
+        return ""
     soup = BeautifulSoup(response.content, "html.parser")
 
     text_div = soup.find("div", {"class": "entry-content"})
@@ -73,34 +81,41 @@ def get_description(url: str) -> str:
             return result
         result = text_div.find("span").text
         return result
-    except Exception:
+    except Exception as error:
+        logging.exception(
+            "Provided URL: %s \nwith status code: %s \ncaused: %e",
+            url,
+            response.status_code,
+            error,
+        )
         return ""
 
 
 def get_duration(mp3_url: str) -> float:
     """
     Return the duration of an MP3 audio file located at the specified URL.
-    
-    The function returns length of an MP3 audio file in seconds to two decimal places. 
+
+    The function returns length of an MP3 audio file in seconds to two decimal places.
     It raises an IOError if there is an I/O error while retrieving the MP3 audio file from mp3_url,
-    and raises an MutagenError if there is an error while extracting metadata from the MP3 audio file.
+    and raises an MutagenError if there is an error while extracting metadata from 
+    the MP3 audio file.
     If the provided link is not for an mp3 file, it logs an error and returns 0.
-    
+
     Args:
         mp3_url (str): URL of an MP3 audio file.
-    
+
     Returns:
         float: The length of the audio file in seconds rounded to two decimal places.
-        
+
     Examples:
         >>> get_duration('https://example.com/audio.mp3')
         127.89
     """
     # Check if the provided URL has an mp3 file extension, else return 0
-    if not mp3_url.endswith('.mp3'):
-        logging.error("Provided URL does not point to an MP3 file: %s", mp3_url)
+    if not mp3_url.lower().endswith(".mp3"):
+        logging.exception("Provided URL: %s does not point at an MP3 file", mp3_url)
         return 0.0
-    
+
     try:
         # Retrieve the MP3 audio file using the provided URL
         response = requests.get(mp3_url, timeout=5)
@@ -112,14 +127,16 @@ def get_duration(mp3_url: str) -> float:
 
             # Return the length of the MP3 audio file in seconds, rounded to 2 decimal places
             return round(mp3.info.length, 2)
-    
+
     except requests.exceptions.RequestException as error:
-        # Log an error if there is a RequestException during retrieval 
-        logging.error("Error retrieving MP3 file from %s: %s", mp3_url, error)
+        # Log an error if there is a RequestException during retrieval
+        logging.exception("Error retrieving MP3 file from %s: %s", mp3_url, error)
         return 0.0
     except Exception as error:
         # Log any other exceptions raised during metadata extraction
-        logging.error("Error extracting metadata from MP3 file at %s: %s", mp3_url, error)
+        logging.exception(
+            "Error extracting metadata from MP3 file at %s: %s", mp3_url, error
+        )
         return 0.0
 
 
@@ -206,7 +223,7 @@ def convert_to_timestamp(date_str: str) -> tuple:
         return date, time
     except ValueError as error:
         # Raise an error if the input string is not in the expected format
-        logging.exception("Invalid ISO 8601 format: %s: %s", date_str, error)
+        logging.error("Invalid ISO 8601 format: %s: %s", date_str, error)
         return 0, 0
 
 
@@ -224,8 +241,8 @@ def get_youtube_id(youtube_url: str) -> str:
     """
     # Validate the input
     if not isinstance(youtube_url, str):
-        logging.exception(
-            "Wrong format of the url %s, it should be string not %s",
+        logging.error(
+            "Wrong format of the url %s, it should be <class 'str'> not %s",
             youtube_url,
             type(youtube_url),
         )
@@ -240,7 +257,7 @@ def get_youtube_id(youtube_url: str) -> str:
         return video_id
 
     # If no match is found add the info to the logging, and return None
-    logging.exception(
+    logging.error(
         "Can't extract the video ID from the match object from the url %s", youtube_url
     )
     return None
@@ -260,7 +277,7 @@ def check_url_response(url: str) -> str:
     response = requests.get(url, timeout=10)
     if response.status_code == requests.codes.ok:
         return url
-    logging.exception("The url %s responce code is %s", url, response.status_code)
+    logging.error("The url %s responce code is %s", url, response.status_code)
     return None
 
 
@@ -277,7 +294,7 @@ def get_audio_file_url(podcast_url: str) -> str:
     try:
         response = requests.get(podcast_url, timeout=5)
     except requests.exceptions.RequestException as error:
-        logging.exception(
+        logging.error(
             "The url %s responce code is %s. Error: %s.",
             podcast_url,
             response.status_code,
@@ -290,7 +307,7 @@ def get_audio_file_url(podcast_url: str) -> str:
         audio_file_url = soup.find("a", {"class": "powerpress_link_pinw"})["href"]
         return check_url_response(audio_file_url)
     except TypeError as error:
-        logging.exception("The url %s is incorrect. Error: %s.", podcast_url, error)
+        logging.error("The url %s is incorrect. Error: %s.", podcast_url, error)
         return None
 
 
@@ -346,7 +363,7 @@ def get_data() -> set:
     try:
         response = requests.get(url, timeout=5)
     except requests.exceptions.RequestException as error:
-        logging.exception(
+        logging.error(
             "The url %s responce code is %s. Error: %s.",
             url,
             response.status_code,
@@ -406,7 +423,7 @@ def parse_the_data(episode: ResultSet) -> tuple:
         )
         return record
     except Exception as error:
-        logging.exception("There is %s in %s", error, title)
+        logging.error("There is %s in %s", error, title)
         return tuple(None for _ in range(9))
 
 
@@ -444,7 +461,7 @@ def save_list_to_csv(data: list, file_name: str) -> None:
                     row = tuple(row)
                     writer.writerow(row)
                 except Exception as error:
-                    logging.exception("There is %s in %s", error, row)
+                    logging.error("There is %s in %s", error, row)
             writer.writerow(row)
 
 
