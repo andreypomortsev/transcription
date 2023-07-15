@@ -7,7 +7,8 @@ import random
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from requests import Response
+import mutagen
+import requests
 
 from parsing import lex_podcast
 
@@ -42,13 +43,13 @@ class TestLexPodcastParser(TestCase):
         )
 
     def test_convert_to_timestamp_with_a_sad_path(self):
-        """Test convert_to_timestamp function with a invalid input"""
+        """Test convert_to_timestamp function with an invalid input"""
         date_str = "2022-11-04T16:09:32Z"
         self.assertEqual(lex_podcast.convert_to_timestamp(date_str), (0, 0))
         self.assertEqual(lex_podcast.convert_to_timestamp(""), (0, 0))
 
     def test_get_youtube_id_with_a_valid_link(self):
-        """Test get_youtube_id with valid link"""
+        """Test get_youtube_id with a valid link"""
         valid_url = self.podcast["youtube_url"]
         youtube_id = lex_podcast.get_youtube_id(valid_url)
         valid_id = valid_url[-11:]
@@ -62,7 +63,7 @@ class TestLexPodcastParser(TestCase):
         self.assertEqual(youtube_id, valid_id)
 
     def test_get_youtube_id_half_an_invalid_link(self):
-        """Test get_youtube_id with invalid input"""
+        """Test get_youtube_id with an invalid input"""
         invalid_url = "cseicjahcdc"
         self.assertIsNone(lex_podcast.get_youtube_id(invalid_url))
         # Check if it handles integers
@@ -73,8 +74,8 @@ class TestLexPodcastParser(TestCase):
         self.assertIsNone(lex_podcast.get_youtube_id(invalid_url))
 
     @patch("googleapiclient.discovery.build")
-    def test_get_date_time_with_valid_input(self, mock_build):
-        """Test get_date_time with valid input"""
+    def test_get_date_time_with_a_valid_input(self, mock_build):
+        """Test get_date_time with a valid input"""
         youtube_video_id = "abcde123456"
         api_key = "secretapikey"
 
@@ -96,3 +97,46 @@ class TestLexPodcastParser(TestCase):
             # Assert the result
             expected = lex_podcast.convert_to_timestamp(date_time)
             self.assertEqual(result, expected)
+
+    @patch("googleapiclient.discovery.build")
+    def test_indexerror_handler_in_get_date_time(self, mock_build):
+        """Test IndexError handler in get_date_time with."""
+        youtube_video_id = "abcde123456"
+        api_key = "secretapikey"
+
+        # Mock the API response
+        mock_response = {
+            "items": []
+        }
+
+        # Configure the mock object
+        mock_request = mock_build.return_value.videos.return_value.list
+        mock_request.return_value.execute.return_value = mock_response
+
+        # Call the function
+        result = lex_podcast.get_date_time(youtube_video_id, api_key)
+
+        self.assertEqual(result, (None, None))
+
+    def test_get_duration_with_valid_url(self):
+        """Test with a valid URL that returns an MP3 file."""
+        duration = lex_podcast.get_duration(self.podcast['audio_file_url'])
+        self.assertEqual(duration, float(self.podcast['duration']))
+
+    @patch('requests.get', side_effect=requests.exceptions.RequestException)
+    def test_get_duration_with_invalid_url(self, mock_get):
+        # Test with an invalid URL that raises a RequestException.
+        duration = lex_podcast.get_duration('https://example.com/non-existent.mp3')
+        self.assertEqual(duration, 0.0)
+
+    # Decorator to patch MutagenError with a MP3 file that has no metadata
+    @patch('mutagen.mp3.MP3', side_effect=mutagen.MutagenError)
+    def test_get_duration_with_no_metadata(self, mock_mp3):
+        """Test with an MP3 file that has no metadata."""
+        duration = lex_podcast.get_duration('https://example.com/audio.mp3')
+        self.assertEqual(duration, 0.0)
+
+    def test_get_duration_with_a_wrong_extension(self):
+        """Test with a url to a Wave file."""
+        duration = lex_podcast.get_duration('https://example.com/audio.wav')
+        self.assertEqual(duration, 0.0)
