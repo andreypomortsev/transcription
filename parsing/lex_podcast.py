@@ -80,22 +80,27 @@ def get_description(url: str) -> str:
 def get_duration(mp3_url: str) -> float:
     """
     Return the duration of an MP3 audio file located at the specified URL.
-
+    
+    The function returns length of an MP3 audio file in seconds to two decimal places. 
+    It raises an IOError if there is an I/O error while retrieving the MP3 audio file from mp3_url,
+    and raises an MutagenError if there is an error while extracting metadata from the MP3 audio file.
+    If the provided link is not for an mp3 file, it logs an error and returns 0.
+    
     Args:
-        mp3_url (str): A string representing the URL of the MP3 audio file.
-
+        mp3_url (str): URL of an MP3 audio file.
+    
     Returns:
-        A float representing the length of the MP3 audio file in seconds,
-        rounded to 2 decimal places.
-
-    Raises:
-        IOError: If there is an I/O error while retrieving the MP3 audio file from 'mp3_url'.
-        MutagenError: If there is an error while extracting metadata from the MP3 audio file.
-
-    Example:
+        float: The length of the audio file in seconds rounded to two decimal places.
+        
+    Examples:
         >>> get_duration('https://example.com/audio.mp3')
         127.89
     """
+    # Check if the provided URL has an mp3 file extension, else return 0
+    if not mp3_url.endswith('.mp3'):
+        logging.error("Provided URL does not point to an MP3 file: %s", mp3_url)
+        return 0.0
+    
     try:
         # Retrieve the MP3 audio file using the provided URL
         response = requests.get(mp3_url, timeout=5)
@@ -107,10 +112,15 @@ def get_duration(mp3_url: str) -> float:
 
             # Return the length of the MP3 audio file in seconds, rounded to 2 decimal places
             return round(mp3.info.length, 2)
+    
     except requests.exceptions.RequestException as error:
-        # Raise an exception if there is an error retrieving the MP3 audio file
-        logging.debug("Error retrieving MP3 file from %s: %s", mp3_url, error)
-        return 0
+        # Log an error if there is a RequestException during retrieval 
+        logging.error("Error retrieving MP3 file from %s: %s", mp3_url, error)
+        return 0.0
+    except Exception as error:
+        # Log any other exceptions raised during metadata extraction
+        logging.error("Error extracting metadata from MP3 file at %s: %s", mp3_url, error)
+        return 0.0
 
 
 def get_date_time(youtube_video_id: str, api_key: str) -> tuple:
