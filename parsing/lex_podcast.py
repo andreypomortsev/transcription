@@ -97,7 +97,7 @@ def get_duration(mp3_url: str) -> float:
 
     The function returns length of an MP3 audio file in seconds to two decimal places.
     It raises an IOError if there is an I/O error while retrieving the MP3 audio file from mp3_url,
-    and raises an MutagenError if there is an error while extracting metadata from 
+    and raises an MutagenError if there is an error while extracting metadata from
     the MP3 audio file.
     If the provided link is not for an mp3 file, it logs an error and returns 0.
 
