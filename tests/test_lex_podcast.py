@@ -29,6 +29,8 @@ class TestLexPodcastParser(TestCase):
 
     def setUp(self) -> None:
         self.podcast = dict(zip(PODCASTS_DATA[0], random.choice(PODCASTS_DATA[1:])))
+        with open("tests/fixtures/fake_mp3_bytes.txt", "rb") as fake_mp3:
+            self.fake_mp3 = fake_mp3.readlines()[0]
 
     ######################################################################
     #  T E S T   C A S E S
@@ -119,8 +121,16 @@ class TestLexPodcastParser(TestCase):
 
     def test_get_duration_with_valid_url(self):
         """Test get_duration with a valid URL that returns an MP3 file."""
-        duration = lex_podcast.get_duration(self.podcast["audio_file_url"])
-        self.assertEqual(duration, float(self.podcast["duration"]))
+        # create a mock HTTP response with mp3 data for requests.get to return
+        http_response = Mock(
+            spec=requests.Response,
+            status_code=200,
+            content=self.fake_mp3
+        )
+        # patch requests.get to return the mock response when called with mp3_url
+        with patch('parsing.lex_podcast.requests.get', return_value=http_response):
+            duration = lex_podcast.get_duration('https://example.com/fake_audio.mp3')
+            self.assertEqual(duration, 12.49)
 
     @patch("parsing.lex_podcast.requests.get", side_effect=requests.exceptions.RequestException)
     def test_get_duration_with_invalid_url(self, _):
@@ -138,6 +148,7 @@ class TestLexPodcastParser(TestCase):
     def test_get_duration_with_a_wrong_extension(self):
         """Test get_duration with a url to a Wave file."""
         duration = lex_podcast.get_duration("https://example.com/audio.wav")
+        self.assertEqual(lex_podcast.logging.getLogger().getEffectiveLevel(), lex_podcast.logging.ERROR)
         self.assertEqual(duration, 0.0)
 
     # @requests_mock.Mocker()
