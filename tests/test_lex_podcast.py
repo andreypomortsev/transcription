@@ -7,8 +7,6 @@ import random
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-import mutagen
-import requests_mock
 import requests
 
 from parsing import lex_podcast
@@ -23,7 +21,7 @@ class TestLexPodcastParser(TestCase):
     def setUpClass(cls) -> None:
         """Load test_data responses needed by tests"""
         global PODCASTS_DATA
-        with open("tests/fixtures/test_data.csv") as csv_data:
+        with open("tests/fixtures/test_data.csv", encoding="UTF-8") as csv_data:
             reader = csv.reader(csv_data, delimiter=";")
             PODCASTS_DATA = list(reader)
 
@@ -121,50 +119,41 @@ class TestLexPodcastParser(TestCase):
 
     def test_get_duration_with_valid_url(self):
         """Test get_duration with a valid URL that returns an MP3 file."""
-        # create a mock HTTP response with mp3 data for requests.get to return
+        # create a mock HTTP response with self.fake_mp3 for requests.get to return
         http_response = Mock(
-            spec=requests.Response,
-            status_code=200,
-            content=self.fake_mp3
+            spec=requests.Response, status_code=200, content=self.fake_mp3
         )
         # patch requests.get to return the mock response when called with mp3_url
-        with patch('parsing.lex_podcast.requests.get', return_value=http_response):
-            duration = lex_podcast.get_duration('https://example.com/fake_audio.mp3')
+        with patch("parsing.lex_podcast.requests.get", return_value=http_response):
+            duration = lex_podcast.get_duration("https://example.com/fake_audio.mp3")
             self.assertEqual(duration, 12.49)
 
-    @patch("parsing.lex_podcast.requests.get", side_effect=requests.exceptions.RequestException)
+    @patch(
+        "parsing.lex_podcast.requests.get",
+        side_effect=requests.exceptions.RequestException,
+    )
     def test_get_duration_with_invalid_url(self, _):
         """Test get_duration with an invalid URL that raises a RequestException."""
         duration = lex_podcast.get_duration("https://example.com/non-existent.mp3")
         self.assertEqual(duration, 0.0)
 
     # Decorator to patch MutagenError with a MP3 file that has no metadata
-    @patch("parsing.lex_podcast.mutagen.mp3.MP3", side_effect=lex_podcast.mutagen.MutagenError)
+    @patch(
+        "parsing.lex_podcast.mutagen.mp3.MP3",
+        side_effect=lex_podcast.mutagen.MutagenError,
+    )
     def test_get_duration_with_no_metadata(self, _):
         """Test get_duration with an MP3 file that has no metadata."""
-        duration = lex_podcast.get_duration("https://example.com/no_metadata_audion.mp3")
+        duration = lex_podcast.get_duration(
+            "https://example.com/no_metadata_audion.mp3"
+        )
         self.assertEqual(duration, 0.0)
 
     def test_get_duration_with_a_wrong_extension(self):
         """Test get_duration with a url to a Wave file."""
         duration = lex_podcast.get_duration("https://example.com/audio.wav")
-        self.assertEqual(lex_podcast.logging.getLogger().getEffectiveLevel(), lex_podcast.logging.ERROR)
+        self.assertEqual(
+            lex_podcast.logging.getLogger().getEffectiveLevel(),
+            lex_podcast.logging.ERROR,
+        )
         self.assertEqual(duration, 0.0)
-
-    # @requests_mock.Mocker()
-    # def test_get_description_with_valid_podcast(self, m):
-    #     """Test get_description with a valid link"""
-    #     name = self.podcast["description"].replace(" ", "-").lower()
-    #     url = f"https://lexfridman.com/{name}/"
-
-    #     # Set up a mock response for the podcast URL
-    #     m.get(
-    #         url,
-    #         text=f'<html><div class="entry-content"><p><p>{self.podcast["description"]}</p></p></div></html>',
-    #     )
-
-    #     # Retrieve the description text
-    #     description = lex_podcast.get_description(url)
-
-    #     # Ensure the description text is correct
-    #     self.assertEqual(description, self.podcast["description"])
