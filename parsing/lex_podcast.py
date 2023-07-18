@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-""" Module parses the lexfridman.com/podcast and return information about all podcasts
-in format of a csv file delimited by a ';'.
+""" Module parses the lexfridman.com/podcast and return information about 
+all podcasts in format of a csv file delimited by a ';'.
 
 The csv file consists the next fields:
     - title (str): the title of the episode.
@@ -311,35 +311,6 @@ def get_audio_file_url(podcast_url: str) -> str:
         return None
 
 
-def get_audio_name(thumbnail_url: str, podcast_url: str) -> str:
-    """
-    Given a thumbnail URL and a podcast URL, retrieves the URL of the audio file
-    for the podcast episode.
-
-    Args:
-        thumbnail_url: A string containing the URL of the podcast episode thumbnail image.
-        podcast_url: A string containing the URL of the podcast episode page.
-
-    Returns:
-        A string containing the URL of the audio file, or None if the URL cannot be retrieved.
-    """
-    pattern = r"^https:\/\/lexfridman\.com\/files\/thumbs_ai_podcast\/(.*)\.png$"
-    match = re.search(pattern, thumbnail_url)
-    if match:
-        file_name = match.group(1)
-
-        prefixes = ["lex_ai", "mit_ai", "lex_audio"]
-        for prefix in prefixes:
-            audio_file_url = (
-                f"https://content.blubrry.com/takeituneasy/{prefix}_{file_name}.mp3"
-            )
-            if check_url_response(audio_file_url):
-                return audio_file_url
-
-    audio_file_url = get_audio_file_url(podcast_url)
-    return audio_file_url
-
-
 def get_data() -> set:
     """
     Retrieves podcast episode data from "https://lexfridman.com/podcast/"
@@ -406,7 +377,7 @@ def parse_the_data(episode: ResultSet) -> tuple:
         guest = episode.select_one(".vid-person").text
         thumbnail_url = episode.select_one(".thumb-youtube img")["src"]
         description = get_description(podcast_page)
-        audio_file_url = get_audio_name(thumbnail_url, podcast_page)
+        audio_file_url = get_audio_file_url(podcast_page)
         duration = get_duration(audio_file_url)
         youtube_video_id = get_youtube_id(youtube_url)
         date, time = get_date_time(youtube_video_id, key)
@@ -423,7 +394,7 @@ def parse_the_data(episode: ResultSet) -> tuple:
         )
         return record
     except Exception as error:
-        logging.error("There is %s in %s", error, title)
+        logging.error("There is %s in %s", error, episode.text)
         return tuple(None for _ in range(9))
 
 
@@ -473,7 +444,7 @@ def main() -> None:
     """
     episodes = get_data()
     data_list = set(map(parse_the_data, episodes))
-    save_list_to_csv(data_list, "lex_podcasts")
+    save_list_to_csv(data_list, "temp")
 
 
 if __name__ == "__main__":
