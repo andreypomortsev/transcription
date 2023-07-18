@@ -60,7 +60,7 @@ def get_description(url: str) -> str:
         "Retrieves the description text of a Lex Fridman podcast episode from: %s", url
     )
     response = requests.get(url, timeout=5)
-    if not response.status_code in response.status_code.ok:
+    if not response.ok:
         logging.exception(
             "Provided URL: %s is not accessible,\n status code: %s",
             url,
