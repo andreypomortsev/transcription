@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 lex_podcasts.csv
 .DS_Store
+
+*.csv
