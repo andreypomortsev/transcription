@@ -157,3 +157,17 @@ class TestLexPodcastParser(TestCase):
             lex_podcast.logging.ERROR,
         )
         self.assertEqual(duration, 0.0)
+
+    def test_check_url_response_with_valid_url(self):
+        """Test check_url_response with a valid url"""
+        http_response = Mock(spec=requests.Response, status_code=200)
+        with patch("parsing.lex_podcast.requests.get", return_value=http_response):
+            result = lex_podcast.check_url_response(self.podcast["audio_file_url"])
+            self.assertEqual(result, self.podcast["audio_file_url"])
+
+    def test_check_url_response_with_invalid_url(self):
+        """Test check_url_response with an invalid url"""
+        http_response = Mock(spec=requests.Response, status_code=404)
+        with patch("parsing.lex_podcast.requests.get", return_value=http_response):
+            result = lex_podcast.check_url_response(self.podcast["audio_file_url"])
+            self.assertIsNone(result)
