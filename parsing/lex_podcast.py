@@ -32,8 +32,8 @@ import mutagen  # don't delete needs for tests
 load_dotenv()
 key = os.getenv("api_key")
 
-
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+datetime_format = "%Y-%m-%d %H:%M:%S"
+now = datetime.now().strftime(datetime_format)
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     filename=f"{__name__}_{now}.log",
@@ -227,7 +227,7 @@ def convert_to_timestamp(date_str: str) -> tuple:
         return 0, 0
 
 
-def get_youtube_id(youtube_url: str) -> str:
+def get_youtube_id(youtube_url: str) -> str | None:
     """
     Extracts the YouTube video ID from a YouTube URL in the format
     'https://www.youtube.com/watch?v=XXXXXXXXXXX' and returns it as a string.
@@ -263,7 +263,7 @@ def get_youtube_id(youtube_url: str) -> str:
     return None
 
 
-def check_url_response(url: str) -> str:
+def check_url_response(url: str) -> str | None:
     """Send an HTTP GET request to the given URL and return the URL
     if the response status code is 200 OK.
 
@@ -281,7 +281,7 @@ def check_url_response(url: str) -> str:
     return None
 
 
-def get_audio_file_url(podcast_url: str) -> str:
+def get_audio_file_url(podcast_url: str) -> str | None:
     """
     Given a podcast URL, retrieves the URL of the audio file associated with podcast episode.
 
@@ -311,7 +311,7 @@ def get_audio_file_url(podcast_url: str) -> str:
         return None
 
 
-def get_data() -> set:
+def get_data() -> set | None:
     """
     Retrieves podcast episode data from "https://lexfridman.com/podcast/"
 
@@ -398,7 +398,7 @@ def parse_the_data(episode: ResultSet) -> tuple:
         return tuple(None for _ in range(9))
 
 
-def save_list_to_csv(data: list, file_name: str) -> None:
+def save_list_to_csv(data: set, file_name: str) -> None:
     """Write the data to a CSV file with the given file_name.
 
     Args:
