@@ -26,6 +26,9 @@ class TestLexPodcastParser(TestCase):
             PODCASTS_DATA = list(reader)
 
     def setUp(self) -> None:
+        # if this value ever changes with the name of corresponding folders
+        #  don't forget to change it in @path which are patch the same 
+        self.request_get = "parsing.lex_podcast.requests.get"
         self.podcast = dict(zip(PODCASTS_DATA[0], random.choice(PODCASTS_DATA[1:])))
         with open("tests/fixtures/fake_mp3_bytes.txt", "rb") as fake_mp3:
             self.fake_mp3 = fake_mp3.readlines()[0]
@@ -124,7 +127,7 @@ class TestLexPodcastParser(TestCase):
             spec=requests.Response, status_code=200, content=self.fake_mp3
         )
         # patch requests.get to return the mock response when called with mp3_url
-        with patch("parsing.lex_podcast.requests.get", return_value=http_response):
+        with patch(self.request_get, return_value=http_response):
             duration = lex_podcast.get_duration("https://example.com/fake_audio.mp3")
             self.assertEqual(duration, 12.49)
 
@@ -134,6 +137,7 @@ class TestLexPodcastParser(TestCase):
     )
     def test_get_duration_with_invalid_url(self, _):
         """Test get_duration with an invalid URL that raises a RequestException."""
+        # with patch(self.request_get, side_effect=requests.exceptions.RequestException):
         duration = lex_podcast.get_duration("https://example.com/non-existent.mp3")
         self.assertEqual(duration, 0.0)
 
@@ -161,13 +165,65 @@ class TestLexPodcastParser(TestCase):
     def test_check_url_response_with_valid_url(self):
         """Test check_url_response with a valid url"""
         http_response = Mock(spec=requests.Response, status_code=200)
-        with patch("parsing.lex_podcast.requests.get", return_value=http_response):
+        with patch(self.request_get, return_value=http_response):
             result = lex_podcast.check_url_response(self.podcast["audio_file_url"])
             self.assertEqual(result, self.podcast["audio_file_url"])
 
     def test_check_url_response_with_invalid_url(self):
         """Test check_url_response with an invalid url"""
         http_response = Mock(spec=requests.Response, status_code=404)
-        with patch("parsing.lex_podcast.requests.get", return_value=http_response):
+        with patch(self.request_get, return_value=http_response):
             result = lex_podcast.check_url_response(self.podcast["audio_file_url"])
             self.assertIsNone(result)
+
+    def test_get_description_successful_request(self):
+        """Test case for get_description with a successful request"""
+        url = "https://example.com/podcast/episode-1"
+        expected_output = "This is the description text of episode 1."
+        mocked_response = Mock(
+            spec=requests.Response,
+            status_code=200,
+            content="<html><body><div class='entry-content'>\
+            <p>Some text</p>\
+            <p>Some more text</p>\
+            <p>This is the description text of episode 1.</p></div></body></html>",
+        )
+        with patch(self.request_get, return_value=mocked_response):
+            actual_output = lex_podcast.get_description(url)
+        self.assertEqual(actual_output, expected_output)
+
+    def test_get_description_request_exception(self):
+        """Test case for get_description requests.exceptions.RequestException"""
+        url = "https://example.com/podcast/episode-2"
+        mocked_response = Mock(
+            spec=requests.Response,
+            status_code=200,
+            content="<html><body><div class='some-content'></div></body></html>",
+        )
+        with patch(self.request_get, return_value=mocked_response):
+            actual_output = lex_podcast.get_description(url)
+        self.assertEqual(actual_output, "")
+
+    def test_get_description_no_description_text(self):
+        """Test case for get_description when no description text is found"""
+        url = "https://example.com/podcast/episode-3"
+        mocked_response = Mock(
+            spec=requests.Response,
+            status_code=200,
+            content="<html><body><div class='entry-content'></div></body></html>",
+        )
+        with patch(self.request_get, return_value=mocked_response):
+            actual_output = lex_podcast.get_description(url)
+        self.assertEqual(actual_output, "")
+
+    def test_get_description_with_timeout(self):
+        """Test case for get_description with status_code=408"""
+        url = "https://example.com/podcast/episode-3"
+        mocked_response = Mock(
+            spec=requests.Response,
+            status_code=408,
+            ok=False
+        )
+        with patch(self.request_get, return_value=mocked_response):
+            actual_output = lex_podcast.get_description(url)
+        self.assertEqual(actual_output, "")
